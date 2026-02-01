@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head><meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>التقارير</title>
+<style>
+body{font-family:system-ui;margin:24px} input,button,select{padding:10px;border-radius:10px;border:1px solid #ddd}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+table{width:100%;border-collapse:collapse;margin-top:12px} th,td{border:1px solid #eee;padding:8px}
+</style>
+</head>
+<body>
+<a href="/">⬅ رجوع</a>
+<h2>📊 التقارير (من - إلى)</h2>
+
+<div class="row">
+  <select id="type">
+    <option value="inputs">المدخلات الواردة</option>
+    <option value="sales">المبيعات</option>
+    <option value="expenses">المصروفات</option>
+  </select>
+  <input id="from" placeholder="من YYYY-MM-DD 00:00:00" />
+  <input id="to" placeholder="إلى YYYY-MM-DD 23:59:59" />
+  <button id="run">عرض</button>
+</div>
+
+<h3>تقرير المخزون حتى تاريخ</h3>
+<div class="row">
+  <input id="until" placeholder="حتى YYYY-MM-DD 23:59:59" />
+  <button id="runStock">عرض المخزون</button>
+</div>
+
+<table>
+  <thead id="thead"></thead>
+  <tbody id="tbody"></tbody>
+</table>
+
+<script type="module">
+import { api, qs, toFromToDefault } from "./app.js";
+const d = toFromToDefault();
+qs("#from").value = d.f;
+qs("#to").value = d.t;
+qs("#until").value = d.t;
+
+function renderTable(rows){
+  if(rows.length===0){
+    qs("#thead").innerHTML = "";
+    qs("#tbody").innerHTML = "<tr><td>لا توجد بيانات</td></tr>";
+    return;
+  }
+  const cols = Object.keys(rows[0]);
+  qs("#thead").innerHTML = "<tr>" + cols.map(c=>`<th>${c}</th>`).join("") + "</tr>";
+  qs("#tbody").innerHTML = rows.map(r=>"<tr>"+cols.map(c=>`<td>${r[c] ?? ""}</td>`).join("")+"</tr>").join("");
+}
+
+qs("#run").onclick = async ()=>{
+  const type = qs("#type").value;
+  const from = qs("#from").value;
+  const to = qs("#to").value;
+  const rows = await api(`/api/reports/${type}?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+  renderTable(rows);
+};
+
+qs("#runStock").onclick = async ()=>{
+  const until = qs("#until").value;
+  const rows = await api(`/api/reports/stock?until=${encodeURIComponent(until)}`);
+  renderTable(rows);
+};
+</script>
+</body>
+</html>

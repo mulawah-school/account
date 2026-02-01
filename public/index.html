@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>برنامج المحاسبة</title>
+  <style>
+    body{font-family:system-ui; margin:24px;}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;}
+    .card{border:1px solid #ddd;border-radius:12px;padding:16px;text-decoration:none;color:#111}
+    .card:hover{box-shadow:0 4px 18px rgba(0,0,0,.08)}
+    h2{margin:0 0 8px}
+    .small{color:#555}
+    .top{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:18px}
+    a.btn{border:1px solid #ddd;border-radius:10px;padding:10px 12px;text-decoration:none;color:#111}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1>برنامج المحاسبة (ويب)</h1>
+    <a class="btn" href="reports.html">التقارير</a>
+  </div>
+
+  <div class="grid">
+    <a class="card" href="inventory.html">
+      <h2>📦 إدخال الأصناف</h2>
+      <div class="small">إضافة صنف + إضافة كميات واردة</div>
+    </a>
+
+    <a class="card" href="sales.html">
+      <h2>🧾 البيع</h2>
+      <div class="small">بيع بالبحث (رقم الصنف/اسم المنتج) مع تحديث المخزون تلقائياً</div>
+    </a>
+
+    <a class="card" href="debts.html">
+      <h2>📱 الدين المؤجل</h2>
+      <div class="small">تسجيل الدين + سداد + إرسال تذكير واتساب</div>
+    </a>
+  </div>
+</body>
+</html>
