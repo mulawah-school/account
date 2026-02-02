@@ -4,14 +4,17 @@ const KEY = "acc_static_v1";
 function loadDB() {
   const raw = localStorage.getItem(KEY);
   if (raw) return JSON.parse(raw);
+
   const db = {
+    currency: "OMR", // ريال عماني
     products: [],         // {id, sku, name, price, unit}
     stockIns: [],         // {id, productId, qty, date, note}
     sales: [],            // {id, date, paymentMethod, customerName, customerPhone, items:[{productId, qty, price}], total, paid}
-    debts: [],            // {id, date, customerName, customerPhone, original, remaining, saleId, dueDate, status}
+    debts: [],            // {id, date, customerName, customerPhone, original, remaining, saleId, dueDate, status, currency}
     debtPayments: [],     // {id, debtId, amount, date}
     ultramsg: { instanceId: "", token: "" }
   };
+
   localStorage.setItem(KEY, JSON.stringify(db));
   return db;
 }
@@ -28,13 +31,15 @@ function nowISO() {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
-function toDateInputDefault() {
-  const d = new Date();
-  const pad = n => String(n).padStart(2,"0");
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-}
-
 function parseDT(s) { return new Date(s.replace(" ", "T")); }
+
+// تحقق بسيط للهاتف (اختياري)
+// هنا فقط نتأكد ليس فارغ. لو تبغى إلزام +968 قل لي.
+function validatePhone(phone){
+  phone = (phone||"").trim();
+  if(!phone) throw new Error("رقم الهاتف مطلوب");
+  return phone;
+}
 
 // ===== Business logic =====
 function getProduct(db, productId) {
@@ -110,7 +115,9 @@ export function createSale(db, {items, paymentMethod, paid, customerName, custom
   paid = Number(paid||0);
 
   if (paymentMethod === "deferred") {
-    if (!customerName || !customerPhone) throw new Error("اسم العميل ورقم الهاتف مطلوبين للدين المؤجل");
+    customerName = (customerName||"").trim();
+    customerPhone = validatePhone(customerPhone);
+    if (!customerName) throw new Error("اسم العميل مطلوب للدين المؤجل");
   }
 
   const sale = {
@@ -125,6 +132,7 @@ export function createSale(db, {items, paymentMethod, paid, customerName, custom
   };
   db.sales.unshift(sale);
 
+  // create debt if deferred
   if (paymentMethod === "deferred") {
     const remaining = Math.max(0, total - paid);
     const status = remaining === 0 ? "PAID" : (paid>0 ? "PARTIAL" : "OPEN");
@@ -137,13 +145,41 @@ export function createSale(db, {items, paymentMethod, paid, customerName, custom
       remaining,
       saleId: sale.id,
       dueDate: dueDate || "",
-      status
+      status,
+      currency: db.currency || "OMR"
     };
     db.debts.unshift(debt);
   }
 
   saveDB(db);
   return sale;
+}
+
+// ✅ إنشاء دين يدوي (الحقول المطلوبة)
+export function createManualDebt(db, { customerName, customerPhone, amount, dueDate }) {
+  customerName = (customerName || "").trim();
+  customerPhone = validatePhone(customerPhone);
+  amount = Number(amount);
+
+  if (!customerName) throw new Error("اسم الشخص مطلوب");
+  if (!(amount > 0)) throw new Error("قيمة الدين غير صحيحة");
+
+  const debt = {
+    id: uid(),
+    date: nowISO(),
+    customerName,
+    customerPhone,
+    original: amount,
+    remaining: amount,
+    saleId: null,
+    dueDate: dueDate || "",
+    status: "OPEN",
+    currency: db.currency || "OMR"
+  };
+
+  db.debts.unshift(debt);
+  saveDB(db);
+  return debt;
 }
 
 export function payDebt(db, {debtId, amount}) {
@@ -186,7 +222,8 @@ export function reportStockUntil(db, until) {
 }
 
 // ===== UltraMsg =====
-// Endpoint: https://api.ultramsg.com/{{instance_id}}/messages/chat (token,to,body) :contentReference[oaicite:1]{index=1}
+// Endpoint: https://api.ultramsg.com/{{instance_id}}/messages/chat
+// Fields: token,to,body
 export async function ultramsgSendChat(db, {to, body}) {
   const { instanceId, token } = db.ultramsg || {};
   if (!instanceId || !token) throw new Error("أدخل instanceId و token في إعدادات UltraMsg أولاً");
@@ -194,7 +231,7 @@ export async function ultramsgSendChat(db, {to, body}) {
 
   const url = `https://api.ultramsg.com/${encodeURIComponent(instanceId)}/messages/chat`;
 
-  // كثير من APIs مثل UltraMsg تقبل form-urlencoded
+  // غالباً form-urlencoded
   const form = new URLSearchParams();
   form.set("token", token);
   form.set("to", to);

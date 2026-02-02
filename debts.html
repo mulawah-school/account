@@ -13,8 +13,8 @@
   </div>
 
   <div class="danger">
-    تنبيه: تخزين UltraMsg token داخل HTML/LocalStorage غير آمن على الاستضافة العامة (GitHub Pages).
-    الأفضل Proxy. (لو تبي أعطيك حل Proxy بسيط جدًا)
+    تنبيه: حفظ UltraMsg token داخل LocalStorage غير آمن على الاستضافة العامة (GitHub Pages).
+    وقد تواجه CORS. إذا تريد “Proxy” بسيط أخبرني.
   </div>
 
   <div class="card" style="margin-top:12px">
@@ -24,9 +24,19 @@
       <input id="token" placeholder="token"/>
       <button id="saveCfg">حفظ</button>
     </div>
-    <div class="small">
-      الإرسال يتم عبر endpoint: /messages/chat (token,to,body) :contentReference[oaicite:2]{index=2}
+  </div>
+
+  <!-- ✅ إضافة دين يدوي -->
+  <div class="card" style="margin-top:12px">
+    <h3>إضافة دين مؤجل (يدوي)</h3>
+    <div class="row">
+      <input id="newName" placeholder="اسم الشخص"/>
+      <input id="newPhone" placeholder="رقم الهاتف (مثال +968...)"/>
+      <input id="newAmount" type="number" step="0.001" placeholder="قيمة الدين (OMR)"/>
+      <input id="newDue" placeholder="تاريخ الاستحقاق (اختياري) YYYY-MM-DD"/>
+      <button id="addDebt">حفظ الدين</button>
     </div>
+    <div class="small">العملة: ريال عماني (OMR)</div>
   </div>
 
   <div class="card" style="margin-top:12px">
@@ -36,7 +46,12 @@
     </div>
 
     <table>
-      <thead><tr><th>ID</th><th>العميل</th><th>الهاتف</th><th>الأصل</th><th>المتبقي</th><th>الحالة</th><th>واتساب</th></tr></thead>
+      <thead>
+        <tr>
+          <th>ID</th><th>العميل</th><th>الهاتف</th>
+          <th>الأصل</th><th>المتبقي</th><th>الحالة</th><th>واتساب</th>
+        </tr>
+      </thead>
       <tbody id="tbl"></tbody>
     </table>
   </div>
@@ -45,14 +60,14 @@
     <h3>سداد دين</h3>
     <div class="row">
       <input id="debtId" type="number" placeholder="Debt ID"/>
-      <input id="amount" type="number" step="0.001" placeholder="مبلغ السداد"/>
+      <input id="amount" type="number" step="0.001" placeholder="مبلغ السداد (OMR)"/>
       <button id="pay">تسجيل سداد</button>
     </div>
   </div>
 </div>
 
 <script type="module">
-import { getDB, setUltraMsg, payDebt, ultramsgSendChat } from "./app.js";
+import { getDB, setUltraMsg, payDebt, ultramsgSendChat, createManualDebt } from "./app.js";
 
 let db = getDB();
 
@@ -70,12 +85,13 @@ function render(q=""){
     : db.debts;
 
   document.querySelector("#tbl").innerHTML = rows.map(d=>{
+    const cur = d.currency || "OMR";
     return `<tr>
       <td>${d.id}</td>
       <td>${d.customerName}</td>
       <td>${d.customerPhone}</td>
-      <td>${Number(d.original).toFixed(3)}</td>
-      <td>${Number(d.remaining).toFixed(3)}</td>
+      <td>${Number(d.original).toFixed(3)} ${cur}</td>
+      <td>${Number(d.remaining).toFixed(3)} ${cur}</td>
       <td>${d.status}</td>
       <td><button data-id="${d.id}">إرسال</button></td>
     </tr>`;
@@ -87,16 +103,16 @@ function render(q=""){
       const debt = getDB().debts.find(x=>x.id===id);
       if(!debt) return alert("الدين غير موجود");
 
+      const cur = debt.currency || "OMR";
       const msg = `السلام عليكم ${debt.customerName}
-تذكير: لديك دين مؤجل متبقي ${Number(debt.remaining).toFixed(3)}
+تذكير: لديك دين مؤجل متبقي ${Number(debt.remaining).toFixed(3)} ${cur}
 شكراً`;
 
       try{
-        // UltraMsg يتطلب "to" رقم دولي مثل +1415... :contentReference[oaicite:3]{index=3}
         await ultramsgSendChat(getDB(), { to: debt.customerPhone, body: msg });
         alert("تم الإرسال (إذا ما ظهرت مشكلة CORS)");
       }catch(e){
-        alert("فشل الإرسال: " + e.message + "\nملاحظة: لو ظهر CORS تحتاج Proxy بسيط.");
+        alert("فشل الإرسال: " + e.message + "\nملاحظة: لو ظهر CORS تحتاج Proxy.");
       }
     };
   });
@@ -106,6 +122,26 @@ document.querySelector("#saveCfg").onclick = ()=>{
   db = getDB();
   setUltraMsg(db, document.querySelector("#instanceId").value, document.querySelector("#token").value);
   alert("تم حفظ الإعدادات");
+};
+
+document.querySelector("#addDebt").onclick = ()=>{
+  try{
+    const db = getDB();
+    createManualDebt(db, {
+      customerName: document.querySelector("#newName").value,
+      customerPhone: document.querySelector("#newPhone").value,
+      amount: document.querySelector("#newAmount").value,
+      dueDate: document.querySelector("#newDue").value ? (document.querySelector("#newDue").value + " 00:00:00") : ""
+    });
+    alert("تم حفظ الدين");
+    document.querySelector("#newName").value = "";
+    document.querySelector("#newPhone").value = "";
+    document.querySelector("#newAmount").value = "";
+    document.querySelector("#newDue").value = "";
+    render(document.querySelector("#q").value);
+  }catch(e){
+    alert(e.message);
+  }
 };
 
 document.querySelector("#search").onclick = ()=> render(document.querySelector("#q").value);

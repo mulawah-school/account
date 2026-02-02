@@ -20,7 +20,7 @@
       <button id="runSales">تقرير البيع</button>
       <button id="runDebts">تقرير الدين المؤجل</button>
     </div>
-    <div class="small">ملاحظة: التاريخ يُحفظ تلقائياً عند كل عملية.</div>
+    <div class="small">العملة: ريال عماني (OMR)</div>
   </div>
 
   <div class="card" style="margin-top:12px">
@@ -69,14 +69,17 @@ document.querySelector("#runSales").onclick = ()=>{
   const db = getDB();
   const from = document.querySelector("#from").value;
   const to = document.querySelector("#to").value;
+  const cur = db.currency || "OMR";
+
   const rows = reportSales(db, from, to).map(s=>({
     date: s.date,
     paymentMethod: s.paymentMethod,
-    total: Number(s.total).toFixed(3),
-    paid: Number(s.paid).toFixed(3),
+    total: Number(s.total).toFixed(3) + " " + cur,
+    paid: Number(s.paid).toFixed(3) + " " + cur,
     customerName: s.customerName,
     customerPhone: s.customerPhone
   }));
+
   document.querySelector("#title").textContent = "تقرير البيع";
   renderTable(rows);
 };
@@ -85,15 +88,17 @@ document.querySelector("#runDebts").onclick = ()=>{
   const db = getDB();
   const from = document.querySelector("#from").value;
   const to = document.querySelector("#to").value;
+
   const rows = reportDebts(db, from, to).map(d=>({
     date: d.date,
     customerName: d.customerName,
     customerPhone: d.customerPhone,
-    original: Number(d.original).toFixed(3),
-    remaining: Number(d.remaining).toFixed(3),
+    original: Number(d.original).toFixed(3) + " " + (d.currency||"OMR"),
+    remaining: Number(d.remaining).toFixed(3) + " " + (d.currency||"OMR"),
     status: d.status,
     dueDate: d.dueDate
   }));
+
   document.querySelector("#title").textContent = "تقرير الدين المؤجل";
   renderTable(rows);
 };
@@ -101,9 +106,14 @@ document.querySelector("#runDebts").onclick = ()=>{
 document.querySelector("#runStock").onclick = ()=>{
   const db = getDB();
   const until = document.querySelector("#until").value;
+
   const rows = reportStockUntil(db, until).map(x=>({
-    sku: x.sku, name: x.name, unit: x.unit, stock: Number(x.stock).toFixed(3)
+    sku: x.sku,
+    name: x.name,
+    unit: x.unit,
+    stock: Number(x.stock).toFixed(3)
   }));
+
   document.querySelector("#title").textContent = "المخزون حتى تاريخ";
   renderTable(rows);
 };

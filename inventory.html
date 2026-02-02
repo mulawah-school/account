@@ -17,7 +17,7 @@
     <div class="row">
       <input id="sku" placeholder="رقم الصنف (SKU)"/>
       <input id="name" placeholder="اسم المنتج"/>
-      <input id="price" type="number" step="0.001" placeholder="سعر البيع"/>
+      <input id="price" type="number" step="0.001" placeholder="سعر البيع (OMR)"/>
       <input id="unit" placeholder="الوحدة (حبة/كرتون)"/>
       <button id="addP">إضافة</button>
     </div>
@@ -58,7 +58,12 @@ function renderProducts(list){
 
   document.querySelector("#tbl").innerHTML = list.map(p => {
     const stock = getStockNow(db, p.id);
-    return `<tr><td>${p.sku}</td><td>${p.name}</td><td>${p.price}</td><td>${stock}</td></tr>`;
+    return `<tr>
+      <td>${p.sku}</td>
+      <td>${p.name}</td>
+      <td>${Number(p.price).toFixed(3)} OMR</td>
+      <td>${stock}</td>
+    </tr>`;
   }).join("");
 
   document.querySelector("#count").textContent = `عدد النتائج: ${list.length}`;

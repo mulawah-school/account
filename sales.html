@@ -18,6 +18,7 @@
       <button id="search">بحث</button>
       <span class="badge" id="hint">—</span>
     </div>
+
     <div class="row">
       <select id="productSelect"></select>
       <input id="qty" type="number" step="0.001" placeholder="الكمية المباعة"/>
@@ -36,13 +37,14 @@
         <option value="bank">تحويل</option>
         <option value="deferred">دين مؤجل</option>
       </select>
-      <input id="paid" type="number" step="0.001" placeholder="المدفوع الآن" value="0"/>
+
+      <input id="paid" type="number" step="0.001" placeholder="المدفوع الآن (OMR)" value="0"/>
       <span class="badge" id="total">الإجمالي: 0</span>
     </div>
 
     <div class="row" id="deferredBox" style="display:none">
       <input id="cname" placeholder="اسم العميل"/>
-      <input id="cphone" placeholder="رقم الهاتف (مثال +968... )"/>
+      <input id="cphone" placeholder="رقم الهاتف (مثال +968...)"/>
       <input id="due" placeholder="تاريخ الاستحقاق (اختياري) YYYY-MM-DD"/>
     </div>
 
@@ -79,14 +81,18 @@ function updateStockLine(){
 function renderCart(){
   const tbody = document.querySelector("#cart");
   tbody.innerHTML = cart.map(it=>{
-    return `<tr><td>${it.name}</td><td>${it.qty}</td><td>${it.price}</td><td>${(it.qty*it.price).toFixed(3)}</td></tr>`;
+    return `<tr>
+      <td>${it.name}</td>
+      <td>${it.qty}</td>
+      <td>${Number(it.price).toFixed(3)} OMR</td>
+      <td>${(it.qty*it.price).toFixed(3)} OMR</td>
+    </tr>`;
   }).join("");
   const total = cart.reduce((s,it)=>s+it.qty*it.price,0);
-  document.querySelector("#total").textContent = `الإجمالي: ${total.toFixed(3)}`;
+  document.querySelector("#total").textContent = `الإجمالي: ${total.toFixed(3)} OMR`;
 }
 
 document.querySelector("#search").onclick = ()=> renderList(document.querySelector("#q").value);
-
 document.querySelector("#productSelect").onchange = updateStockLine;
 
 document.querySelector("#add").onclick = ()=>{
@@ -120,7 +126,7 @@ document.querySelector("#save").onclick = ()=>{
       customerPhone: document.querySelector("#cphone").value,
       dueDate: document.querySelector("#due").value ? (document.querySelector("#due").value + " 00:00:00") : ""
     });
-    alert(`تم حفظ البيع. الإجمالي: ${sale.total}`);
+    alert(`تم حفظ البيع. الإجمالي: ${Number(sale.total).toFixed(3)} OMR`);
     cart = [];
     renderCart();
     renderList(document.querySelector("#q").value);
