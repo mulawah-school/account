@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="style.css"/>
+  <title>الدين المؤجل</title>
+</head>
+<body>
+<div class="container">
+  <div class="top">
+    <a class="badge" href="index.html">⬅ الرئيسية</a>
+    <h2>📱 الدين المؤجل</h2>
+  </div>
+
+  <div class="danger">
+    تنبيه: تخزين UltraMsg token داخل HTML/LocalStorage غير آمن على الاستضافة العامة (GitHub Pages).
+    الأفضل Proxy. (لو تبي أعطيك حل Proxy بسيط جدًا)
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h3>إعدادات UltraMsg</h3>
+    <div class="row">
+      <input id="instanceId" placeholder="instance_id"/>
+      <input id="token" placeholder="token"/>
+      <button id="saveCfg">حفظ</button>
+    </div>
+    <div class="small">
+      الإرسال يتم عبر endpoint: /messages/chat (token,to,body) :contentReference[oaicite:2]{index=2}
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <div class="row">
+      <input id="q" placeholder="بحث بالاسم أو الهاتف"/>
+      <button id="search">بحث</button>
+    </div>
+
+    <table>
+      <thead><tr><th>ID</th><th>العميل</th><th>الهاتف</th><th>الأصل</th><th>المتبقي</th><th>الحالة</th><th>واتساب</th></tr></thead>
+      <tbody id="tbl"></tbody>
+    </table>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h3>سداد دين</h3>
+    <div class="row">
+      <input id="debtId" type="number" placeholder="Debt ID"/>
+      <input id="amount" type="number" step="0.001" placeholder="مبلغ السداد"/>
+      <button id="pay">تسجيل سداد</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { getDB, setUltraMsg, payDebt, ultramsgSendChat } from "./app.js";
+
+let db = getDB();
+
+function loadCfg(){
+  db = getDB();
+  document.querySelector("#instanceId").value = db.ultramsg?.instanceId || "";
+  document.querySelector("#token").value = db.ultramsg?.token || "";
+}
+
+function render(q=""){
+  db = getDB();
+  const t = (q||"").trim();
+  const rows = t
+    ? db.debts.filter(d => d.customerName.includes(t) || d.customerPhone.includes(t))
+    : db.debts;
+
+  document.querySelector("#tbl").innerHTML = rows.map(d=>{
+    return `<tr>
+      <td>${d.id}</td>
+      <td>${d.customerName}</td>
+      <td>${d.customerPhone}</td>
+      <td>${Number(d.original).toFixed(3)}</td>
+      <td>${Number(d.remaining).toFixed(3)}</td>
+      <td>${d.status}</td>
+      <td><button data-id="${d.id}">إرسال</button></td>
+    </tr>`;
+  }).join("");
+
+  document.querySelectorAll("button[data-id]").forEach(btn=>{
+    btn.onclick = async ()=>{
+      const id = Number(btn.getAttribute("data-id"));
+      const debt = getDB().debts.find(x=>x.id===id);
+      if(!debt) return alert("الدين غير موجود");
+
+      const msg = `السلام عليكم ${debt.customerName}
+تذكير: لديك دين مؤجل متبقي ${Number(debt.remaining).toFixed(3)}
+شكراً`;
+
+      try{
+        // UltraMsg يتطلب "to" رقم دولي مثل +1415... :contentReference[oaicite:3]{index=3}
+        await ultramsgSendChat(getDB(), { to: debt.customerPhone, body: msg });
+        alert("تم الإرسال (إذا ما ظهرت مشكلة CORS)");
+      }catch(e){
+        alert("فشل الإرسال: " + e.message + "\nملاحظة: لو ظهر CORS تحتاج Proxy بسيط.");
+      }
+    };
+  });
+}
+
+document.querySelector("#saveCfg").onclick = ()=>{
+  db = getDB();
+  setUltraMsg(db, document.querySelector("#instanceId").value, document.querySelector("#token").value);
+  alert("تم حفظ الإعدادات");
+};
+
+document.querySelector("#search").onclick = ()=> render(document.querySelector("#q").value);
+
+document.querySelector("#pay").onclick = ()=>{
+  try{
+    db = getDB();
+    payDebt(db, { debtId: Number(document.querySelector("#debtId").value), amount: document.querySelector("#amount").value });
+    alert("تم تسجيل السداد");
+    render(document.querySelector("#q").value);
+  }catch(e){ alert(e.message); }
+};
+
+loadCfg();
+render();
+</script>
+</body>
+</html>

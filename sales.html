@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="style.css"/>
+  <title>البيع</title>
+</head>
+<body>
+<div class="container">
+  <div class="top">
+    <a class="badge" href="index.html">⬅ الرئيسية</a>
+    <h2>🧾 البيع</h2>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <input id="q" placeholder="بحث (SKU أو اسم)"/>
+      <button id="search">بحث</button>
+      <span class="badge" id="hint">—</span>
+    </div>
+    <div class="row">
+      <select id="productSelect"></select>
+      <input id="qty" type="number" step="0.001" placeholder="الكمية المباعة"/>
+      <button id="add">إضافة للسلة</button>
+      <span class="badge" id="stockLine">المتوفر: —</span>
+    </div>
+
+    <table>
+      <thead><tr><th>الصنف</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead>
+      <tbody id="cart"></tbody>
+    </table>
+
+    <div class="row" style="margin-top:12px">
+      <select id="pay">
+        <option value="cash">نقدي</option>
+        <option value="bank">تحويل</option>
+        <option value="deferred">دين مؤجل</option>
+      </select>
+      <input id="paid" type="number" step="0.001" placeholder="المدفوع الآن" value="0"/>
+      <span class="badge" id="total">الإجمالي: 0</span>
+    </div>
+
+    <div class="row" id="deferredBox" style="display:none">
+      <input id="cname" placeholder="اسم العميل"/>
+      <input id="cphone" placeholder="رقم الهاتف (مثال +968... )"/>
+      <input id="due" placeholder="تاريخ الاستحقاق (اختياري) YYYY-MM-DD"/>
+    </div>
+
+    <div class="row">
+      <button id="save">حفظ البيع</button>
+      <button id="clear">مسح السلة</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { getDB, findProducts, getStockNow, createSale } from "./app.js";
+
+let db = getDB();
+let list = [];
+let cart = [];
+
+function renderList(q=""){
+  db = getDB();
+  list = findProducts(db, q);
+  const sel = document.querySelector("#productSelect");
+  sel.innerHTML = list.map(p => `<option value="${p.id}">${p.sku} - ${p.name}</option>`).join("");
+  document.querySelector("#hint").textContent = `نتائج: ${list.length}`;
+  updateStockLine();
+}
+
+function updateStockLine(){
+  const pid = Number(document.querySelector("#productSelect").value);
+  if(!pid){ document.querySelector("#stockLine").textContent = "المتوفر: —"; return; }
+  const stock = getStockNow(db, pid);
+  document.querySelector("#stockLine").textContent = `المتوفر: ${stock}`;
+}
+
+function renderCart(){
+  const tbody = document.querySelector("#cart");
+  tbody.innerHTML = cart.map(it=>{
+    return `<tr><td>${it.name}</td><td>${it.qty}</td><td>${it.price}</td><td>${(it.qty*it.price).toFixed(3)}</td></tr>`;
+  }).join("");
+  const total = cart.reduce((s,it)=>s+it.qty*it.price,0);
+  document.querySelector("#total").textContent = `الإجمالي: ${total.toFixed(3)}`;
+}
+
+document.querySelector("#search").onclick = ()=> renderList(document.querySelector("#q").value);
+
+document.querySelector("#productSelect").onchange = updateStockLine;
+
+document.querySelector("#add").onclick = ()=>{
+  db = getDB();
+  const pid = Number(document.querySelector("#productSelect").value);
+  const qty = Number(document.querySelector("#qty").value);
+  const p = db.products.find(x=>x.id===pid);
+  if(!p) return alert("اختر صنف");
+  const stock = getStockNow(db, pid);
+  if(!(qty>0)) return alert("كمية غير صحيحة");
+  if(qty > stock) return alert(`المخزون لا يكفي. المتوفر: ${stock}`);
+
+  cart.push({ productId: pid, name: p.name, qty, price: Number(p.price) });
+  document.querySelector("#stockLine").textContent = `المتوفر قبل: ${stock} | المتبقي بعد: ${stock - qty}`;
+  renderCart();
+};
+
+document.querySelector("#pay").onchange = ()=>{
+  document.querySelector("#deferredBox").style.display =
+    document.querySelector("#pay").value === "deferred" ? "flex" : "none";
+};
+
+document.querySelector("#save").onclick = ()=>{
+  try{
+    db = getDB();
+    const sale = createSale(db, {
+      items: cart.map(it=>({productId: it.productId, qty: it.qty})),
+      paymentMethod: document.querySelector("#pay").value,
+      paid: document.querySelector("#paid").value,
+      customerName: document.querySelector("#cname").value,
+      customerPhone: document.querySelector("#cphone").value,
+      dueDate: document.querySelector("#due").value ? (document.querySelector("#due").value + " 00:00:00") : ""
+    });
+    alert(`تم حفظ البيع. الإجمالي: ${sale.total}`);
+    cart = [];
+    renderCart();
+    renderList(document.querySelector("#q").value);
+  }catch(e){ alert(e.message); }
+};
+
+document.querySelector("#clear").onclick = ()=>{ cart=[]; renderCart(); };
+
+renderList();
+renderCart();
+</script>
+</body>
+</html>

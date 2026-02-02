@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="style.css"/>
+  <title>إدخال الأصناف</title>
+</head>
+<body>
+<div class="container">
+  <div class="top">
+    <a class="badge" href="index.html">⬅ الرئيسية</a>
+    <h2>📦 إدخال الأصناف</h2>
+  </div>
+
+  <div class="card">
+    <h3>1) إضافة صنف</h3>
+    <div class="row">
+      <input id="sku" placeholder="رقم الصنف (SKU)"/>
+      <input id="name" placeholder="اسم المنتج"/>
+      <input id="price" type="number" step="0.001" placeholder="سعر البيع"/>
+      <input id="unit" placeholder="الوحدة (حبة/كرتون)"/>
+      <button id="addP">إضافة</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h3>2) إضافة كمية واردة</h3>
+    <div class="row">
+      <input id="q" placeholder="بحث (SKU أو اسم)"/>
+      <button id="search">بحث</button>
+      <span class="badge" id="count">—</span>
+    </div>
+    <div class="row">
+      <select id="productSelect"></select>
+      <input id="qty" type="number" step="0.001" placeholder="الكمية الواردة"/>
+      <input id="note" placeholder="ملاحظة (فاتورة/مورد)"/>
+      <button id="addIn">تسجيل وارد</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px">
+    <h3>الأصناف</h3>
+    <table>
+      <thead><tr><th>SKU</th><th>الاسم</th><th>السعر</th><th>المخزون الحالي</th></tr></thead>
+      <tbody id="tbl"></tbody>
+    </table>
+  </div>
+</div>
+
+<script type="module">
+import { getDB, addProduct, addStockIn, findProducts, getStockNow } from "./app.js";
+
+let db = getDB();
+
+function renderProducts(list){
+  const sel = document.querySelector("#productSelect");
+  sel.innerHTML = list.map(p => `<option value="${p.id}">${p.sku} - ${p.name}</option>`).join("");
+
+  document.querySelector("#tbl").innerHTML = list.map(p => {
+    const stock = getStockNow(db, p.id);
+    return `<tr><td>${p.sku}</td><td>${p.name}</td><td>${p.price}</td><td>${stock}</td></tr>`;
+  }).join("");
+
+  document.querySelector("#count").textContent = `عدد النتائج: ${list.length}`;
+}
+
+function load(q=""){
+  db = getDB();
+  const list = findProducts(db, q);
+  renderProducts(list);
+}
+
+document.querySelector("#addP").onclick = () => {
+  try{
+    db = getDB();
+    addProduct(db, {
+      sku: document.querySelector("#sku").value,
+      name: document.querySelector("#name").value,
+      price: document.querySelector("#price").value,
+      unit: document.querySelector("#unit").value
+    });
+    alert("تمت إضافة الصنف");
+    load();
+  }catch(e){ alert(e.message); }
+};
+
+document.querySelector("#search").onclick = () => load(document.querySelector("#q").value);
+
+document.querySelector("#addIn").onclick = () => {
+  try{
+    db = getDB();
+    addStockIn(db, {
+      productId: Number(document.querySelector("#productSelect").value),
+      qty: document.querySelector("#qty").value,
+      note: document.querySelector("#note").value
+    });
+    alert("تم تسجيل الوارد");
+    load(document.querySelector("#q").value);
+  }catch(e){ alert(e.message); }
+};
+
+load();
+</script>
+</body>
+</html>
