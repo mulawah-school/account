@@ -53,6 +53,33 @@
       <button id="clear">مسح السلة</button>
     </div>
   </div>
+
+  <!-- ✅ سجل المنتجات المباعة + المجموع بالأسفل -->
+  <hr/>
+  <div class="card" style="margin-top:12px">
+    <h3>سجل المنتجات المباعة</h3>
+
+    <table>
+      <thead>
+        <tr>
+          <th>التاريخ</th>
+          <th>الصنف</th>
+          <th>الكمية</th>
+          <th>السعر</th>
+          <th>الإجمالي</th>
+          <th>طريقة الدفع</th>
+          <th>العميل</th>
+        </tr>
+      </thead>
+      <tbody id="soldRows"></tbody>
+    </table>
+
+    <div class="row" style="justify-content:space-between; align-items:center; margin-top:10px">
+      <span class="badge" id="soldCount">عدد العناصر: 0</span>
+      <span class="badge" id="soldTotal">مجموع المبيعات: 0.000 OMR</span>
+    </div>
+  </div>
+
 </div>
 
 <script type="module">
@@ -88,8 +115,52 @@ function renderCart(){
       <td>${(it.qty*it.price).toFixed(3)} OMR</td>
     </tr>`;
   }).join("");
+
   const total = cart.reduce((s,it)=>s+it.qty*it.price,0);
   document.querySelector("#total").textContent = `الإجمالي: ${total.toFixed(3)} OMR`;
+}
+
+/* ✅ جديد: سجل المبيعات (كل المنتجات المباعة) + المجموع */
+function renderSalesHistory(){
+  const db = getDB();
+  const cur = db.currency || "OMR";
+
+  const rows = [];
+  for(const s of db.sales){
+    for(const it of s.items){
+      const p = db.products.find(x=>x.id===it.productId);
+      const name = p ? `${p.sku} - ${p.name}` : `#${it.productId}`;
+      rows.push({
+        date: s.date,
+        name,
+        qty: Number(it.qty),
+        price: Number(it.price),
+        lineTotal: Number(it.qty) * Number(it.price),
+        paymentMethod: s.paymentMethod,
+        customer: s.paymentMethod === "deferred" ? (s.customerName || "") : ""
+      });
+    }
+  }
+
+  // الأحدث أولاً
+  rows.sort((a,b)=> (a.date < b.date ? 1 : -1));
+
+  const tbody = document.querySelector("#soldRows");
+  tbody.innerHTML = rows.map(r=>`
+    <tr>
+      <td>${r.date}</td>
+      <td>${r.name}</td>
+      <td>${r.qty}</td>
+      <td>${r.price.toFixed(3)} ${cur}</td>
+      <td>${r.lineTotal.toFixed(3)} ${cur}</td>
+      <td>${r.paymentMethod}</td>
+      <td>${r.customer}</td>
+    </tr>
+  `).join("");
+
+  const total = rows.reduce((s,r)=> s + r.lineTotal, 0);
+  document.querySelector("#soldCount").textContent = `عدد العناصر: ${rows.length}`;
+  document.querySelector("#soldTotal").textContent = `مجموع المبيعات: ${total.toFixed(3)} ${cur}`;
 }
 
 document.querySelector("#search").onclick = ()=> renderList(document.querySelector("#q").value);
@@ -101,6 +172,7 @@ document.querySelector("#add").onclick = ()=>{
   const qty = Number(document.querySelector("#qty").value);
   const p = db.products.find(x=>x.id===pid);
   if(!p) return alert("اختر صنف");
+
   const stock = getStockNow(db, pid);
   if(!(qty>0)) return alert("كمية غير صحيحة");
   if(qty > stock) return alert(`المخزون لا يكفي. المتوفر: ${stock}`);
@@ -126,17 +198,24 @@ document.querySelector("#save").onclick = ()=>{
       customerPhone: document.querySelector("#cphone").value,
       dueDate: document.querySelector("#due").value ? (document.querySelector("#due").value + " 00:00:00") : ""
     });
+
     alert(`تم حفظ البيع. الإجمالي: ${Number(sale.total).toFixed(3)} OMR`);
+
     cart = [];
     renderCart();
     renderList(document.querySelector("#q").value);
+
+    // ✅ مهم: تحديث سجل المنتجات المباعة بعد الحفظ
+    renderSalesHistory();
   }catch(e){ alert(e.message); }
 };
 
 document.querySelector("#clear").onclick = ()=>{ cart=[]; renderCart(); };
 
+// عند فتح الصفحة
 renderList();
 renderCart();
+renderSalesHistory();
 </script>
 </body>
 </html>
