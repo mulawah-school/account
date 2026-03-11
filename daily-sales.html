@@ -84,8 +84,6 @@ font-size:18px;
 
 <input id="sellerName" placeholder="الاسم">
 
-<input id="phone" placeholder="الرقم">
-
 <input id="product" placeholder="الصنف">
 
 <input id="received" placeholder="الكمية المستلمة">
@@ -115,7 +113,6 @@ font-size:18px;
 
 <th>التاريخ</th>
 <th>الاسم</th>
-<th>الرقم</th>
 <th>الصنف</th>
 <th>المستلم</th>
 <th>المباع</th>
@@ -123,6 +120,7 @@ font-size:18px;
 <th>سعر الحبة</th>
 <th>المجموع</th>
 <th>الفائدة</th>
+<th>مجموع بيع الشخص</th>
 <th>حذف</th>
 
 </tr>
@@ -151,10 +149,10 @@ font-size:18px;
 </div>
 
 
-
 <script>
 
 let data = JSON.parse(localStorage.getItem("daily_sales") || "[]")
+
 
 function getCarry(product,date){
 
@@ -167,11 +165,11 @@ return previous[previous.length-1].remaining
 }
 
 
+
 function save(){
 
 const date = document.getElementById("date").value
 const name = document.getElementById("sellerName").value
-const phone = document.getElementById("phone").value
 const product = document.getElementById("product").value
 
 const received = Number(document.getElementById("received").value)
@@ -184,30 +182,60 @@ const carry = getCarry(product,date)
 
 const receivedTotal = received + carry
 
-const remaining = receivedTotal - sold
-
 const total = sold * price
 
 const profit = total * (percent/100)
+
+let existing = data.find(d =>
+d.name === name &&
+d.product === product &&
+d.date === date
+)
+
+if(existing){
+
+existing.received += received
+existing.sold += sold
+existing.remaining = existing.received - existing.sold
+existing.total += total
+existing.profit += profit
+
+}else{
 
 data.push({
 
 date,
 name,
-phone,
 product,
 received:receivedTotal,
 sold,
-remaining,
+remaining:receivedTotal - sold,
 price,
 total,
 profit
 
 })
 
+}
+
 localStorage.setItem("daily_sales",JSON.stringify(data))
 
+clearInputs()
+
 render()
+
+}
+
+
+
+function clearInputs(){
+
+document.getElementById("sellerName").value=""
+document.getElementById("product").value=""
+document.getElementById("received").value=""
+document.getElementById("sold").value=""
+document.getElementById("price").value=""
+document.getElementById("percent").value=""
 
 }
 
@@ -245,13 +273,16 @@ totalProfit += d.profit
 
 products[d.product] = (products[d.product] || 0) + d.sold
 
+let personTotal = today
+.filter(x => x.name === d.name)
+.reduce((s,x)=> s + x.total ,0)
+
 table.innerHTML += `
 
 <tr>
 
 <td>${d.date}</td>
 <td>${d.name}</td>
-<td>${d.phone}</td>
 <td>${d.product}</td>
 <td>${d.received}</td>
 <td>${d.sold}</td>
@@ -259,6 +290,7 @@ table.innerHTML += `
 <td>${d.price}</td>
 <td>${d.total.toFixed(2)}</td>
 <td>${d.profit.toFixed(2)}</td>
+<td>${personTotal.toFixed(2)}</td>
 
 <td>
 <button onclick="deleteRow(${i})">❌</button>
@@ -275,7 +307,7 @@ document.getElementById("totalSales").innerText = totalSales.toFixed(2)
 document.getElementById("totalProfit").innerText = totalProfit.toFixed(2)
 
 
-let list = ""
+let list=""
 
 for(let p in products){
 
@@ -286,6 +318,7 @@ list += `<p>${p} : ${products[p]}</p>`
 document.getElementById("productTotals").innerHTML = list
 
 }
+
 
 document.getElementById("date").addEventListener("change",render)
 
