@@ -1,124 +1,288 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <link rel="stylesheet" href="style.css"/>
-  <title>التقارير</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<link rel="stylesheet" href="style.css"/>
+<title>التقارير</title>
 </head>
+
 <body>
+
 <div class="container">
-  <div class="top">
-    <a class="badge" href="index.html">⬅ الرئيسية</a>
-    <h2>📊 التقارير</h2>
-  </div>
 
-  <div class="card">
-    <h3>فلترة بالتاريخ (من - إلى)</h3>
-    <div class="row">
-      <input id="from" placeholder="من (YYYY-MM-DD 00:00:00)"/>
-      <input id="to" placeholder="إلى (YYYY-MM-DD 23:59:59)"/>
-      <button id="runSales">تقرير البيع</button>
-      <button id="runDebts">تقرير الدين المؤجل</button>
-    </div>
-    <div class="small">العملة: ريال عماني (OMR)</div>
-  </div>
-
-  <div class="card" style="margin-top:12px">
-    <h3>المخزون حتى تاريخ</h3>
-    <div class="row">
-      <input id="until" placeholder="حتى (YYYY-MM-DD 23:59:59)"/>
-      <button id="runStock">عرض</button>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top:12px">
-    <h3 id="title">—</h3>
-    <table>
-      <thead id="thead"></thead>
-      <tbody id="tbody"></tbody>
-    </table>
-  </div>
+<div class="top">
+<a class="badge" href="index.html">⬅ الرئيسية</a>
+<h2>📊 التقارير</h2>
 </div>
 
+
+<div class="card">
+
+<h3>فلترة بالتاريخ (من - إلى)</h3>
+
+<div class="row">
+
+<input id="from" placeholder="من (YYYY-MM-DD 00:00:00)"/>
+<input id="to" placeholder="إلى (YYYY-MM-DD 23:59:59)"/>
+
+<button id="runSales">تقرير البيع</button>
+<button id="runDebts">تقرير الدين المؤجل</button>
+
+</div>
+
+<div class="small">العملة: ريال عماني (OMR)</div>
+
+</div>
+
+
+<div class="card" style="margin-top:12px">
+
+<h3>المخزون حتى تاريخ</h3>
+
+<div class="row">
+
+<input id="until" placeholder="حتى (YYYY-MM-DD 23:59:59)"/>
+
+<button id="runStock">عرض</button>
+
+</div>
+
+</div>
+
+
+<div class="card" style="margin-top:12px">
+
+<h3>تقارير البيع اليومي</h3>
+
+<div class="row">
+
+<input type="date" id="dailyDate">
+
+<button onclick="dailySalesReport()">تقرير بيع يومي</button>
+
+<input type="month" id="monthlyDate">
+
+<button onclick="monthlySalesReport()">تقرير بيع شهري</button>
+
+</div>
+
+</div>
+
+
+<div class="card" style="margin-top:12px">
+
+<h3 id="title">—</h3>
+
+<table>
+
+<thead id="thead"></thead>
+
+<tbody id="tbody"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+
+
 <script type="module">
+
 import { getDB, reportSales, reportDebts, reportStockUntil } from "./app.js";
 
 function setDefaults(){
-  const d = new Date();
-  const pad = n => String(n).padStart(2,"0");
-  const day = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-  document.querySelector("#from").value = `${day} 00:00:00`;
-  document.querySelector("#to").value = `${day} 23:59:59`;
-  document.querySelector("#until").value = `${day} 23:59:59`;
+
+const d = new Date();
+
+const pad = n => String(n).padStart(2,"0");
+
+const day = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+
+document.querySelector("#from").value = `${day} 00:00:00`;
+document.querySelector("#to").value = `${day} 23:59:59`;
+document.querySelector("#until").value = `${day} 23:59:59`;
+
 }
 
 function renderTable(rows){
-  const thead = document.querySelector("#thead");
-  const tbody = document.querySelector("#tbody");
-  if(!rows.length){
-    thead.innerHTML = "";
-    tbody.innerHTML = `<tr><td>لا توجد بيانات</td></tr>`;
-    return;
-  }
-  const cols = Object.keys(rows[0]);
-  thead.innerHTML = "<tr>" + cols.map(c=>`<th>${c}</th>`).join("") + "</tr>";
-  tbody.innerHTML = rows.map(r => "<tr>" + cols.map(c=>`<td>${r[c] ?? ""}</td>`).join("") + "</tr>").join("");
+
+const thead = document.querySelector("#thead");
+const tbody = document.querySelector("#tbody");
+
+if(!rows.length){
+
+thead.innerHTML = "";
+
+tbody.innerHTML = `<tr><td>لا توجد بيانات</td></tr>`;
+
+return;
+
 }
 
+const cols = Object.keys(rows[0]);
+
+thead.innerHTML = "<tr>" + cols.map(c=>`<th>${c}</th>`).join("") + "</tr>";
+
+tbody.innerHTML = rows.map(r =>
+"<tr>" + cols.map(c=>`<td>${r[c] ?? ""}</td>`).join("") + "</tr>"
+).join("");
+
+}
+
+
+
 document.querySelector("#runSales").onclick = ()=>{
-  const db = getDB();
-  const from = document.querySelector("#from").value;
-  const to = document.querySelector("#to").value;
-  const cur = db.currency || "OMR";
 
-  const rows = reportSales(db, from, to).map(s=>({
-    date: s.date,
-    paymentMethod: s.paymentMethod,
-    total: Number(s.total).toFixed(3) + " " + cur,
-    paid: Number(s.paid).toFixed(3) + " " + cur,
-    customerName: s.customerName,
-    customerPhone: s.customerPhone
-  }));
+const db = getDB();
 
-  document.querySelector("#title").textContent = "تقرير البيع";
-  renderTable(rows);
+const from = document.querySelector("#from").value;
+
+const to = document.querySelector("#to").value;
+
+const cur = db.currency || "OMR";
+
+const rows = reportSales(db, from, to).map(s=>({
+
+date: s.date,
+
+paymentMethod: s.paymentMethod,
+
+total: Number(s.total).toFixed(3) + " " + cur,
+
+paid: Number(s.paid).toFixed(3) + " " + cur,
+
+customerName: s.customerName,
+
+customerPhone: s.customerPhone
+
+}));
+
+document.querySelector("#title").textContent = "تقرير البيع";
+
+renderTable(rows);
+
 };
+
+
 
 document.querySelector("#runDebts").onclick = ()=>{
-  const db = getDB();
-  const from = document.querySelector("#from").value;
-  const to = document.querySelector("#to").value;
 
-  const rows = reportDebts(db, from, to).map(d=>({
-    date: d.date,
-    customerName: d.customerName,
-    customerPhone: d.customerPhone,
-    original: Number(d.original).toFixed(3) + " " + (d.currency||"OMR"),
-    remaining: Number(d.remaining).toFixed(3) + " " + (d.currency||"OMR"),
-    status: d.status,
-    dueDate: d.dueDate
-  }));
+const db = getDB();
 
-  document.querySelector("#title").textContent = "تقرير الدين المؤجل";
-  renderTable(rows);
+const from = document.querySelector("#from").value;
+
+const to = document.querySelector("#to").value;
+
+const rows = reportDebts(db, from, to).map(d=>({
+
+date: d.date,
+
+customerName: d.customerName,
+
+customerPhone: d.customerPhone,
+
+original: Number(d.original).toFixed(3) + " " + (d.currency||"OMR"),
+
+remaining: Number(d.remaining).toFixed(3) + " " + (d.currency||"OMR"),
+
+status: d.status,
+
+dueDate: d.dueDate
+
+}));
+
+document.querySelector("#title").textContent = "تقرير الدين المؤجل";
+
+renderTable(rows);
+
 };
+
+
 
 document.querySelector("#runStock").onclick = ()=>{
-  const db = getDB();
-  const until = document.querySelector("#until").value;
 
-  const rows = reportStockUntil(db, until).map(x=>({
-    sku: x.sku,
-    name: x.name,
-    unit: x.unit,
-    stock: Number(x.stock).toFixed(3)
-  }));
+const db = getDB();
 
-  document.querySelector("#title").textContent = "المخزون حتى تاريخ";
-  renderTable(rows);
+const until = document.querySelector("#until").value;
+
+const rows = reportStockUntil(db, until).map(x=>({
+
+sku: x.sku,
+
+name: x.name,
+
+unit: x.unit,
+
+stock: Number(x.stock).toFixed(3)
+
+}));
+
+document.querySelector("#title").textContent = "المخزون حتى تاريخ";
+
+renderTable(rows);
+
 };
 
+
+
+window.dailySalesReport = function(){
+
+let date = document.querySelector("#dailyDate").value
+
+let data = JSON.parse(localStorage.getItem("daily_sales") || "[]")
+
+let today = data.filter(d=> d.date === date)
+
+let rows = today.map(d=>({
+التاريخ: d.date,
+الاسم: d.name,
+الصنف: d.product,
+المباع: d.sold,
+المجموع: d.total.toFixed(3),
+الفائدة: d.profit.toFixed(3)
+}))
+
+document.querySelector("#title").textContent = "تقرير البيع اليومي"
+
+renderTable(rows)
+
+}
+
+
+
+window.monthlySalesReport = function(){
+
+let month = document.querySelector("#monthlyDate").value
+
+let data = JSON.parse(localStorage.getItem("daily_sales") || "[]")
+
+let monthData = data.filter(d=> d.date.startsWith(month))
+
+let total = monthData.reduce((s,d)=> s + d.total ,0)
+
+let profit = monthData.reduce((s,d)=> s + d.profit ,0)
+
+let rows = [{
+
+الشهر: month,
+اجمالي_البيع: total.toFixed(3) + " OMR",
+اجمالي_الفائدة: profit.toFixed(3) + " OMR"
+
+}]
+
+document.querySelector("#title").textContent = "تقرير البيع الشهري"
+
+renderTable(rows)
+
+}
+
+
+
 setDefaults();
+
 </script>
+
 </body>
 </html>
