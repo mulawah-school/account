@@ -1,38 +1,115 @@
-<!DOCTYPE html>
-<html lang="ar">
+<!doctype html>
+<html lang="ar" dir="rtl">
+
 <head>
-<meta charset="UTF-8">
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+
+<link rel="stylesheet" href="style.css"/>
+
 <title>البيع اليومي</title>
+
+<style>
+
+.formgrid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+gap:10px;
+margin-bottom:20px;
+}
+
+input{
+padding:8px;
+border:1px solid #ccc;
+border-radius:6px;
+}
+
+button{
+padding:8px 14px;
+border:none;
+border-radius:6px;
+background:#3b82f6;
+color:white;
+cursor:pointer;
+}
+
+button:hover{
+background:#2563eb;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
+}
+
+th,td{
+border:1px solid #ddd;
+padding:8px;
+text-align:center;
+}
+
+th{
+background:#f3f4f6;
+}
+
+.card{
+padding:20px;
+}
+
+</style>
+
 </head>
 
 <body>
 
-<h2>📊 البيع اليومي</h2>
+<div class="container">
 
-<form id="form">
+<div class="top">
 
-<input placeholder="الاسم" id="name">
+<h1>📊 البيع اليومي</h1>
 
-<input placeholder="الرقم" id="phone">
+<a class="badge" href="index.html">⬅ الرجوع للرئيسية</a>
 
-<input placeholder="الصنف" id="product">
+</div>
 
-<input placeholder="الكمية المستلمة" id="received">
+<div class="card">
 
-<input placeholder="الكمية المباعة" id="sold">
+<!-- نموذج الإدخال -->
 
-<input placeholder="النسبة %" id="percent">
+<div class="formgrid">
 
-<button type="submit">حفظ</button>
+<input id="name" placeholder="الاسم">
 
-</form>
+<input id="phone" placeholder="الرقم">
 
-<table border="1">
+<input id="product" placeholder="الصنف">
+
+<input id="received" placeholder="الكمية المستلمة">
+
+<input id="sold" placeholder="الكمية المباعة">
+
+<input id="percent" placeholder="النسبة %">
+
+<button onclick="save()">حفظ</button>
+
+</div>
+
+</div>
+
+<!-- جدول البيانات -->
+
+<div class="card">
+
+<h3>📋 البيانات المدخلة</h3>
+
+<table>
 
 <thead>
 
 <tr>
 <th>الاسم</th>
+<th>الرقم</th>
 <th>الصنف</th>
 <th>المستلم</th>
 <th>المباع</th>
@@ -46,56 +123,66 @@
 
 </table>
 
+</div>
+
+</div>
+
 <script>
 
-const API="http://localhost:3000"
+let data = JSON.parse(localStorage.getItem("daily_sales") || "[]")
 
-document.getElementById("form").onsubmit=async e=>{
+function save(){
 
-e.preventDefault()
+const received = Number(document.getElementById("received").value)
+const sold = Number(document.getElementById("sold").value)
+const percent = Number(document.getElementById("percent").value)
 
-const data={
+const item = {
 
 name:name.value,
 phone:phone.value,
-product_name:product.value,
-qty_received:received.value,
-qty_sold:sold.value,
-percentage:percent.value
+product:product.value,
+received:received,
+sold:sold,
+remaining:received-sold,
+profit:sold*(percent/100)
 
 }
 
-await fetch(API+"/api/daily-sales",{
+data.push(item)
 
-method:"POST",
-headers:{'Content-Type':'application/json'},
-body:JSON.stringify(data)
-
-})
+localStorage.setItem("daily_sales",JSON.stringify(data))
 
 load()
 
 }
 
-async function load(){
-
-const r=await fetch(API+"/api/daily-sales")
-
-const data=await r.json()
+function load(){
 
 table.innerHTML=""
 
 data.forEach(d=>{
 
 table.innerHTML+=`
+
 <tr>
+
 <td>${d.name}</td>
-<td>${d.product_name}</td>
-<td>${d.qty_received}</td>
-<td>${d.qty_sold}</td>
+
+<td>${d.phone}</td>
+
+<td>${d.product}</td>
+
+<td>${d.received}</td>
+
+<td>${d.sold}</td>
+
 <td>${d.remaining}</td>
-<td>${d.profit}</td>
+
+<td>${d.profit.toFixed(2)}</td>
+
 </tr>
+
 `
 
 })
