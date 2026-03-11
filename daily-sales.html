@@ -1,155 +1,61 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-
-<head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-
-<link rel="stylesheet" href="style.css"/>
-
-<title>البيع اليومي</title>
-
-<style>
-
-.formgrid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
-gap:10px;
-margin-bottom:20px;
-}
-
-input{
-padding:8px;
-border:1px solid #ccc;
-border-radius:6px;
-}
-
-button{
-padding:8px 14px;
-border:none;
-border-radius:6px;
-background:#3b82f6;
-color:white;
-cursor:pointer;
-}
-
-button:hover{
-background:#2563eb;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:20px;
-}
-
-th,td{
-border:1px solid #ddd;
-padding:8px;
-text-align:center;
-}
-
-th{
-background:#f3f4f6;
-}
-
-.card{
-padding:20px;
-}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="container">
-
-<div class="top">
-
-<h1>📊 البيع اليومي</h1>
-
-<a class="badge" href="index.html">⬅ الرجوع للرئيسية</a>
-
-</div>
-
-<div class="card">
-
-<!-- نموذج الإدخال -->
-
-<div class="formgrid">
-
-<input id="name" placeholder="الاسم">
-
-<input id="phone" placeholder="الرقم">
-
-<input id="product" placeholder="الصنف">
-
-<input id="received" placeholder="الكمية المستلمة">
-
-<input id="sold" placeholder="الكمية المباعة">
-
-<input id="percent" placeholder="النسبة %">
-
-<button onclick="save()">حفظ</button>
-
-</div>
-
-</div>
-
-<!-- جدول البيانات -->
-
-<div class="card">
-
-<h3>📋 البيانات المدخلة</h3>
-
-<table>
-
-<thead>
-
-<tr>
-<th>الاسم</th>
-<th>الرقم</th>
-<th>الصنف</th>
-<th>المستلم</th>
-<th>المباع</th>
-<th>الباقي</th>
-<th>الفائدة</th>
-</tr>
-
-</thead>
-
-<tbody id="table"></tbody>
-
-</table>
-
-</div>
-
-</div>
-
 <script>
 
 let data = JSON.parse(localStorage.getItem("daily_sales") || "[]")
 
 function save(){
 
+const name = document.getElementById("name").value
+const phone = document.getElementById("phone").value
+const product = document.getElementById("product").value
+
 const received = Number(document.getElementById("received").value)
 const sold = Number(document.getElementById("sold").value)
+
+const price = Number(document.getElementById("price").value)
+
 const percent = Number(document.getElementById("percent").value)
 
-const item = {
+const remaining = received - sold
 
-name:name.value,
-phone:phone.value,
-product:product.value,
-received:received,
-sold:sold,
-remaining:received-sold,
-profit:sold*(percent/100)
+const total = sold * price
+
+const profit = total * (percent/100)
+
+let found = false
+
+data.forEach(item=>{
+
+if(item.name === name && item.product === product){
+
+item.received += received
+item.sold += sold
+item.remaining = item.received - item.sold
+item.total += total
+item.profit += profit
+
+found = true
 
 }
 
-data.push(item)
+})
+
+if(!found){
+
+data.push({
+
+name:name,
+phone:phone,
+product:product,
+received:received,
+sold:sold,
+remaining:remaining,
+price:price,
+total:total,
+profit:profit
+
+})
+
+}
 
 localStorage.setItem("daily_sales",JSON.stringify(data))
 
@@ -161,24 +67,26 @@ function load(){
 
 table.innerHTML=""
 
+let totalSales = 0
+let totalProfit = 0
+
 data.forEach(d=>{
 
-table.innerHTML+=`
+totalSales += d.total
+totalProfit += d.profit
+
+table.innerHTML += `
 
 <tr>
 
 <td>${d.name}</td>
-
 <td>${d.phone}</td>
-
 <td>${d.product}</td>
-
 <td>${d.received}</td>
-
 <td>${d.sold}</td>
-
 <td>${d.remaining}</td>
-
+<td>${d.price}</td>
+<td>${d.total.toFixed(2)}</td>
 <td>${d.profit.toFixed(2)}</td>
 
 </tr>
@@ -187,11 +95,11 @@ table.innerHTML+=`
 
 })
 
+document.getElementById("totalSales").innerText = totalSales.toFixed(2)
+document.getElementById("totalProfit").innerText = totalProfit.toFixed(2)
+
 }
 
 load()
 
 </script>
-
-</body>
-</html>
