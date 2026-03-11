@@ -1,105 +1,339 @@
-<script>
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <link rel="stylesheet" href="style.css"/>
+  <title>البيع اليومي</title>
+  <style>
+    .page-actions{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      margin-bottom:18px;
+      flex-wrap:wrap;
+    }
 
-let data = JSON.parse(localStorage.getItem("daily_sales") || "[]")
+    .section-card{
+      background:#fff;
+      border:1px solid #e5e7eb;
+      border-radius:18px;
+      padding:20px;
+      margin-bottom:18px;
+    }
 
-function save(){
+    .formgrid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+      gap:12px;
+      margin-bottom:14px;
+    }
 
-const name = document.getElementById("name").value
-const phone = document.getElementById("phone").value
-const product = document.getElementById("product").value
+    .formgrid input{
+      width:100%;
+      padding:12px;
+      border:1px solid #d1d5db;
+      border-radius:10px;
+      font:inherit;
+      box-sizing:border-box;
+    }
 
-const received = Number(document.getElementById("received").value)
-const sold = Number(document.getElementById("sold").value)
+    .save-btn{
+      border:none;
+      border-radius:10px;
+      padding:12px 18px;
+      font:inherit;
+      cursor:pointer;
+      background:#3b82f6;
+      color:#fff;
+      min-width:140px;
+    }
 
-const price = Number(document.getElementById("price").value)
+    .save-btn:hover{
+      opacity:.95;
+    }
 
-const percent = Number(document.getElementById("percent").value)
+    .table-wrap{
+      overflow:auto;
+    }
 
-const remaining = received - sold
+    table{
+      width:100%;
+      border-collapse:collapse;
+      min-width:900px;
+    }
 
-const total = sold * price
+    th, td{
+      border-bottom:1px solid #e5e7eb;
+      padding:12px 10px;
+      text-align:center;
+    }
 
-const profit = total * (percent/100)
+    th{
+      background:#f3f4f6;
+      font-weight:700;
+    }
 
-let found = false
+    .summary-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+      gap:12px;
+      margin-top:18px;
+    }
 
-data.forEach(item=>{
+    .summary-box{
+      background:#f9fafb;
+      border:1px solid #e5e7eb;
+      border-radius:14px;
+      padding:14px;
+    }
 
-if(item.name === name && item.product === product){
+    .summary-box h4{
+      margin:0 0 8px;
+      font-size:18px;
+    }
 
-item.received += received
-item.sold += sold
-item.remaining = item.received - item.sold
-item.total += total
-item.profit += profit
+    .muted{
+      color:#6b7280;
+    }
 
-found = true
+    .empty-row{
+      padding:18px;
+      color:#6b7280;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="page-actions">
+      <a class="badge" href="index.html">⬅ الرجوع للرئيسية</a>
+      <h1>📊 البيع اليومي</h1>
+    </div>
 
-}
+    <div class="section-card">
+      <div class="formgrid">
+        <input id="sellerName" placeholder="الاسم">
+        <input id="phone" placeholder="الرقم">
+        <input id="product" placeholder="الصنف">
+        <input id="received" type="number" min="0" step="any" placeholder="الكمية المستلمة">
+        <input id="sold" type="number" min="0" step="any" placeholder="الكمية المباعة">
+        <input id="price" type="number" min="0" step="any" placeholder="سعر البيع للحبة">
+        <input id="percent" type="number" min="0" step="any" placeholder="النسبة %">
+      </div>
 
-})
+      <button class="save-btn" type="button" onclick="saveEntry()">حفظ</button>
+    </div>
 
-if(!found){
+    <div class="section-card">
+      <h2>📋 البيانات المدخلة</h2>
 
-data.push({
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>الاسم</th>
+              <th>الرقم</th>
+              <th>الصنف</th>
+              <th>المستلم</th>
+              <th>المباع</th>
+              <th>الباقي</th>
+              <th>سعر الحبة</th>
+              <th>المجموع</th>
+              <th>النسبة</th>
+              <th>الفائدة</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
 
-name:name,
-phone:phone,
-product:product,
-received:received,
-sold:sold,
-remaining:remaining,
-price:price,
-total:total,
-profit:profit
+      <div class="summary-grid">
+        <div class="summary-box">
+          <h4>إجمالي المبيعات</h4>
+          <div><span id="totalSales">0.000</span> ريال</div>
+        </div>
 
-})
+        <div class="summary-box">
+          <h4>إجمالي الفائدة</h4>
+          <div><span id="totalProfit">0.000</span> ريال</div>
+        </div>
 
-}
+        <div class="summary-box">
+          <h4>الكميات المباعة لكل صنف</h4>
+          <div id="productTotals" class="muted">لا توجد بيانات</div>
+        </div>
+      </div>
+    </div>
+  </div>
 
-localStorage.setItem("daily_sales",JSON.stringify(data))
+  <script>
+    const STORAGE_KEY = "daily_sales";
 
-load()
+    function getEl(id) {
+      return document.getElementById(id);
+    }
 
-}
+    function getData() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        return [];
+      }
+    }
 
-function load(){
+    function setData(data) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
 
-table.innerHTML=""
+    function clearInputs() {
+      getEl("sellerName").value = "";
+      getEl("phone").value = "";
+      getEl("product").value = "";
+      getEl("received").value = "";
+      getEl("sold").value = "";
+      getEl("price").value = "";
+      getEl("percent").value = "";
+      getEl("sellerName").focus();
+    }
 
-let totalSales = 0
-let totalProfit = 0
+    function toNumber(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : 0;
+    }
 
-data.forEach(d=>{
+    function format3(value) {
+      return toNumber(value).toFixed(3);
+    }
 
-totalSales += d.total
-totalProfit += d.profit
+    function saveEntry() {
+      const sellerName = getEl("sellerName").value.trim();
+      const phone = getEl("phone").value.trim();
+      const product = getEl("product").value.trim();
+      const received = toNumber(getEl("received").value);
+      const sold = toNumber(getEl("sold").value);
+      const price = toNumber(getEl("price").value);
+      const percent = toNumber(getEl("percent").value);
 
-table.innerHTML += `
+      if (!sellerName || !product) {
+        alert("الاسم والصنف مطلوبان");
+        return;
+      }
 
-<tr>
+      if (received < 0 || sold < 0 || price < 0 || percent < 0) {
+        alert("القيم يجب أن تكون صفر أو أكثر");
+        return;
+      }
 
-<td>${d.name}</td>
-<td>${d.phone}</td>
-<td>${d.product}</td>
-<td>${d.received}</td>
-<td>${d.sold}</td>
-<td>${d.remaining}</td>
-<td>${d.price}</td>
-<td>${d.total.toFixed(2)}</td>
-<td>${d.profit.toFixed(2)}</td>
+      const total = sold * price;
+      const profit = total * (percent / 100);
 
-</tr>
+      const data = getData();
 
-`
+      const existingIndex = data.findIndex(item =>
+        String(item.name).trim() === sellerName &&
+        String(item.product).trim() === product
+      );
 
-})
+      if (existingIndex !== -1) {
+        const old = data[existingIndex];
+        const updatedReceived = toNumber(old.received) + received;
+        const updatedSold = toNumber(old.sold) + sold;
+        const updatedPrice = price > 0 ? price : toNumber(old.price);
+        const updatedPercent = percent > 0 ? percent : toNumber(old.percent);
+        const updatedTotal = updatedSold * updatedPrice;
+        const updatedProfit = updatedTotal * (updatedPercent / 100);
 
-document.getElementById("totalSales").innerText = totalSales.toFixed(2)
-document.getElementById("totalProfit").innerText = totalProfit.toFixed(2)
+        data[existingIndex] = {
+          ...old,
+          name: sellerName,
+          phone: phone || old.phone || "",
+          product: product,
+          received: updatedReceived,
+          sold: updatedSold,
+          remaining: updatedReceived - updatedSold,
+          price: updatedPrice,
+          total: updatedTotal,
+          percent: updatedPercent,
+          profit: updatedProfit
+        };
+      } else {
+        data.push({
+          name: sellerName,
+          phone: phone,
+          product: product,
+          received: received,
+          sold: sold,
+          remaining: received - sold,
+          price: price,
+          total: total,
+          percent: percent,
+          profit: profit
+        });
+      }
 
-}
+      setData(data);
+      clearInputs();
+      renderTable();
+    }
 
-load()
+    function renderTable() {
+      const data = getData();
+      const tableBody = getEl("tableBody");
+      const totalSalesEl = getEl("totalSales");
+      const totalProfitEl = getEl("totalProfit");
+      const productTotalsEl = getEl("productTotals");
 
-</script>
+      tableBody.innerHTML = "";
+
+      if (data.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="10" class="empty-row">لا توجد بيانات مدخلة</td></tr>';
+        totalSalesEl.textContent = "0.000";
+        totalProfitEl.textContent = "0.000";
+        productTotalsEl.textContent = "لا توجد بيانات";
+        return;
+      }
+
+      let totalSales = 0;
+      let totalProfit = 0;
+      const productTotals = {};
+
+      data.forEach(item => {
+        totalSales += toNumber(item.total);
+        totalProfit += toNumber(item.profit);
+
+        const productName = item.product || "-";
+        productTotals[productName] = (productTotals[productName] || 0) + toNumber(item.sold);
+
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${item.name || ""}</td>
+          <td>${item.phone || ""}</td>
+          <td>${item.product || ""}</td>
+          <td>${format3(item.received)}</td>
+          <td>${format3(item.sold)}</td>
+          <td>${format3(item.remaining)}</td>
+          <td>${format3(item.price)}</td>
+          <td>${format3(item.total)}</td>
+          <td>${format3(item.percent)}%</td>
+          <td>${format3(item.profit)}</td>
+        `;
+        tableBody.appendChild(row);
+      });
+
+      totalSalesEl.textContent = format3(totalSales);
+      totalProfitEl.textContent = format3(totalProfit);
+
+      const lines = Object.entries(productTotals).map(([productName, qty]) => {
+        return `${productName}: ${format3(qty)}`;
+      });
+
+      productTotalsEl.innerHTML = lines.join("<br>");
+    }
+
+    renderTable();
+  </script>
+</body>
+</html>
