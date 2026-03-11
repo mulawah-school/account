@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<title>البيع اليومي</title>
+</head>
+
+<body>
+
+<h2>📊 البيع اليومي</h2>
+
+<form id="form">
+
+<input placeholder="الاسم" id="name">
+
+<input placeholder="الرقم" id="phone">
+
+<input placeholder="الصنف" id="product">
+
+<input placeholder="الكمية المستلمة" id="received">
+
+<input placeholder="الكمية المباعة" id="sold">
+
+<input placeholder="النسبة %" id="percent">
+
+<button type="submit">حفظ</button>
+
+</form>
+
+<table border="1">
+
+<thead>
+
+<tr>
+<th>الاسم</th>
+<th>الصنف</th>
+<th>المستلم</th>
+<th>المباع</th>
+<th>الباقي</th>
+<th>الفائدة</th>
+</tr>
+
+</thead>
+
+<tbody id="table"></tbody>
+
+</table>
+
+<script>
+
+const API="http://localhost:3000"
+
+document.getElementById("form").onsubmit=async e=>{
+
+e.preventDefault()
+
+const data={
+
+name:name.value,
+phone:phone.value,
+product_name:product.value,
+qty_received:received.value,
+qty_sold:sold.value,
+percentage:percent.value
+
+}
+
+await fetch(API+"/api/daily-sales",{
+
+method:"POST",
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify(data)
+
+})
+
+load()
+
+}
+
+async function load(){
+
+const r=await fetch(API+"/api/daily-sales")
+
+const data=await r.json()
+
+table.innerHTML=""
+
+data.forEach(d=>{
+
+table.innerHTML+=`
+<tr>
+<td>${d.name}</td>
+<td>${d.product_name}</td>
+<td>${d.qty_received}</td>
+<td>${d.qty_sold}</td>
+<td>${d.remaining}</td>
+<td>${d.profit}</td>
+</tr>
+`
+
+})
+
+}
+
+load()
+
+</script>
+
+</body>
+</html>
