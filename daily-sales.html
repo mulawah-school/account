@@ -1,328 +1,100 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
-
 <head>
-
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1"/>
-
-<link rel="stylesheet" href="style.css"/>
-
-<title>البيع اليومي</title>
-
-<style>
-
-.formgrid{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-gap:10px;
-margin-bottom:15px;
-}
-
-input{
-padding:10px;
-border:1px solid #ccc;
-border-radius:8px;
-}
-
-button{
-padding:10px;
-border:none;
-border-radius:8px;
-background:#3b82f6;
-color:white;
-cursor:pointer;
-}
-
-button:hover{
-background:#2563eb;
-}
-
-table{
-width:100%;
-border-collapse:collapse;
-margin-top:20px;
-}
-
-th,td{
-border:1px solid #ddd;
-padding:8px;
-text-align:center;
-}
-
-th{
-background:#f3f4f6;
-}
-
-.summary{
-margin-top:20px;
-font-size:18px;
-}
-
-</style>
-
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>البيع اليومي - نظام المحاسبة</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { font-family: 'Tajawal', sans-serif; background-color: #f0fdfa; }
+  </style>
 </head>
-
-<body>
-
-<div class="container">
-
-<div class="top">
-
-<h1>📊 البيع اليومي</h1>
-
-<a class="badge" href="index.html">⬅ الرجوع للرئيسية</a>
-
-</div>
-
-
-<div class="card">
-
-<div class="formgrid">
-
-<input type="date" id="date">
-
-<input id="sellerName" placeholder="الاسم">
-
-<input id="product" placeholder="الصنف">
-
-<input id="received" placeholder="الكمية المستلمة">
-
-<input id="sold" placeholder="الكمية المباعة">
-
-<input id="price" placeholder="سعر البيع للحبة">
-
-<input id="percent" placeholder="النسبة %">
-
-<button onclick="save()">حفظ</button>
-
-</div>
-
-</div>
-
-
-<div class="card">
-
-<h3>📋 البيانات المدخلة</h3>
-
-<table>
-
-<thead>
-
-<tr>
-
-<th>التاريخ</th>
-<th>الاسم</th>
-<th>الصنف</th>
-<th>المستلم</th>
-<th>المباع</th>
-<th>الباقي</th>
-<th>سعر الحبة</th>
-<th>المجموع</th>
-<th>الفائدة</th>
-<th>مجموع بيع الشخص</th>
-<th>حذف</th>
-
-</tr>
-
-</thead>
-
-<tbody id="table"></tbody>
-
-</table>
-
-
-<div class="summary">
-
-<p>إجمالي البيع اليومي: <b id="totalSales">0</b> ريال</p>
-
-<p>إجمالي الفائدة: <b id="totalProfit">0</b> ريال</p>
-
-<p>الكميات المباعة لكل صنف:</p>
-
-<div id="productTotals"></div>
-
-</div>
-
-</div>
-
-</div>
-
-
-<script>
-
-let data = JSON.parse(localStorage.getItem("daily_sales") || "[]")
-
-
-function getCarry(product,date){
-
-let previous = data.filter(d=> d.product === product && d.date < date)
-
-if(previous.length === 0) return 0
-
-return previous[previous.length-1].remaining
-
-}
-
-
-
-function save(){
-
-const date = document.getElementById("date").value
-const name = document.getElementById("sellerName").value
-const product = document.getElementById("product").value
-
-const received = Number(document.getElementById("received").value)
-const sold = Number(document.getElementById("sold").value)
-
-const price = Number(document.getElementById("price").value)
-const percent = Number(document.getElementById("percent").value)
-
-const carry = getCarry(product,date)
-
-const receivedTotal = received + carry
-
-const total = sold * price
-
-const profit = total * (percent/100)
-
-let existing = data.find(d =>
-d.name === name &&
-d.product === product &&
-d.date === date
-)
-
-if(existing){
-
-existing.received += received
-existing.sold += sold
-existing.remaining = existing.received - existing.sold
-existing.total += total
-existing.profit += profit
-
-}else{
-
-data.push({
-
-date,
-name,
-product,
-received:receivedTotal,
-sold,
-remaining:receivedTotal - sold,
-price,
-total,
-profit
-
-})
-
-}
-
-localStorage.setItem("daily_sales",JSON.stringify(data))
-
-clearInputs()
-
-render()
-
-}
-
-
-
-function clearInputs(){
-
-document.getElementById("sellerName").value=""
-document.getElementById("product").value=""
-document.getElementById("received").value=""
-document.getElementById("sold").value=""
-document.getElementById("price").value=""
-document.getElementById("percent").value=""
-
-}
-
-
-
-function deleteRow(i){
-
-data.splice(i,1)
-
-localStorage.setItem("daily_sales",JSON.stringify(data))
-
-render()
-
-}
-
-
-
-function render(){
-
-const date = document.getElementById("date").value
-
-let today = data.filter(d=> d.date === date)
-
-table.innerHTML=""
-
-let totalSales = 0
-let totalProfit = 0
-
-let products = {}
-
-today.forEach((d,i)=>{
-
-totalSales += d.total
-totalProfit += d.profit
-
-products[d.product] = (products[d.product] || 0) + d.sold
-
-let personTotal = today
-.filter(x => x.name === d.name)
-.reduce((s,x)=> s + x.total ,0)
-
-table.innerHTML += `
-
-<tr>
-
-<td>${d.date}</td>
-<td>${d.name}</td>
-<td>${d.product}</td>
-<td>${d.received}</td>
-<td>${d.sold}</td>
-<td>${d.remaining}</td>
-<td>${d.price}</td>
-<td>${d.total.toFixed(2)}</td>
-<td>${d.profit.toFixed(2)}</td>
-<td>${personTotal.toFixed(2)}</td>
-
-<td>
-<button onclick="deleteRow(${i})">❌</button>
-</td>
-
-</tr>
-
-`
-
-})
-
-
-document.getElementById("totalSales").innerText = totalSales.toFixed(2)
-document.getElementById("totalProfit").innerText = totalProfit.toFixed(2)
-
-
-let list=""
-
-for(let p in products){
-
-list += `<p>${p} : ${products[p]}</p>`
-
-}
-
-document.getElementById("productTotals").innerHTML = list
-
-}
-
-
-document.getElementById("date").addEventListener("change",render)
-
-</script>
-
+<body class="min-h-screen">
+
+  <nav class="bg-teal-600 text-white shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <a href="index.html" class="p-2 hover:bg-white/20 rounded-full transition-colors text-white">
+          <i data-lucide="arrow-right" class="w-6 h-6"></i>
+        </a>
+        <h1 class="text-xl font-bold">تسجيل البيع اليومي</h1>
+      </div>
+      <input type="date" id="date" class="bg-teal-700 text-white px-4 py-2 rounded-xl outline-none border border-teal-500 text-sm"/>
+    </div>
+  </nav>
+
+  <main class="max-w-7xl mx-auto px-4 py-8">
+    
+    <!-- Input Form Card -->
+    <div class="bg-white rounded-3xl shadow-lg border border-teal-100 p-8 mb-8">
+      <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-slate-500">اسم الموظف</label>
+          <input id="name" placeholder="الاسم" class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none bg-slate-50"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-slate-500">اسم الصنف</label>
+          <input id="product" placeholder="الصنف" class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none bg-slate-50"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-slate-500">المستلم</label>
+          <input id="received" type="number" placeholder="0" class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none bg-slate-50"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-slate-500">المباع</label>
+          <input id="sold" type="number" placeholder="0" class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none bg-slate-50"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-slate-500">السعر</label>
+          <input id="price" type="number" step="0.001" placeholder="0.000" class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none bg-slate-50 font-bold"/>
+        </div>
+        <div class="space-y-1">
+          <label class="text-xs font-bold text-slate-500">النسبة %</label>
+          <input id="percent" type="number" placeholder="5" class="w-full px-3 py-2 rounded-lg border border-slate-200 outline-none bg-slate-50"/>
+        </div>
+      </div>
+      <button id="add" onclick="add()" class="mt-6 w-full bg-teal-600 text-white py-4 rounded-2xl font-black text-lg hover:bg-teal-700 shadow-xl shadow-teal-100 transition-all">
+        حفظ العملية اليومية
+      </button>
+    </div>
+
+    <!-- Summary Statistics -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+      <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 p-6 rounded-3xl text-white shadow-xl">
+        <h4 class="text-indigo-100 text-sm font-bold uppercase tracking-widest">إجمالي المبيعات اليومية</h4>
+        <div id="totalSales" class="text-3xl font-black mt-2">0.000 OMR</div>
+      </div>
+      <div class="bg-gradient-to-br from-emerald-600 to-emerald-700 p-6 rounded-3xl text-white shadow-xl">
+        <h4 class="text-emerald-100 text-sm font-bold uppercase tracking-widest">إجمالي الفائدة اليومية</h4>
+        <div id="totalProfit" class="text-3xl font-black mt-2">0.000 OMR</div>
+      </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="w-full text-right text-sm">
+          <thead class="bg-slate-50 text-slate-500">
+            <tr>
+              <th class="px-4 py-4">التاريخ</th>
+              <th class="px-4 py-4">الاسم</th>
+              <th class="px-4 py-4">الصنف</th>
+              <th class="px-4 py-4 text-center">المباع</th>
+              <th class="px-4 py-4 text-center">المتبقي</th>
+              <th class="px-4 py-4 text-center">المجموع</th>
+              <th class="px-4 py-4 text-center">الفائدة</th>
+              <th class="px-4 py-4 text-center">إجمالي الشخص</th>
+              <th class="px-4 py-4 text-center">حذف</th>
+            </tr>
+          </thead>
+          <tbody id="table" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+  <script>lucide.createIcons();</script>
 </body>
 </html>

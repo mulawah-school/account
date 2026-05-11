@@ -1,162 +1,82 @@
 <!doctype html>
 <html lang="ar" dir="rtl">
 <head>
-  <meta charset="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <link rel="stylesheet" href="style.css"/>
-  <title>الدين المؤجل</title>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>الدين المؤجل - نظام المحاسبة</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    body { font-family: 'Tajawal', sans-serif; background-color: #fffaf5; }
+  </style>
 </head>
-<body>
-<div class="container">
-  <div class="top">
-    <a class="badge" href="index.html">⬅ الرئيسية</a>
-    <h2>📱 الدين المؤجل</h2>
-  </div>
-
-  <div class="danger">
-    تنبيه: حفظ UltraMsg token داخل LocalStorage غير آمن على الاستضافة العامة (GitHub Pages).
-    وقد تواجه CORS. إذا تريد “Proxy” بسيط أخبرني.
-  </div>
-
-  <div class="card" style="margin-top:12px">
-    <h3>إعدادات UltraMsg</h3>
-    <div class="row">
-      <input id="instanceId" placeholder="instance_id"/>
-      <input id="token" placeholder="token"/>
-      <button id="saveCfg">حفظ</button>
+<body class="min-h-screen">
+  <nav class="bg-amber-600 text-white shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-4">
+        <a href="index.html" class="p-2 hover:bg-white/20 rounded-full transition-colors">
+          <i data-lucide="arrow-right" class="w-6 h-6"></i>
+        </a>
+        <h1 class="text-xl font-bold">سجل الديون والتحصيل</h1>
+      </div>
     </div>
-  </div>
+  </nav>
 
-  <!-- ✅ إضافة دين يدوي -->
-  <div class="card" style="margin-top:12px">
-    <h3>إضافة دين مؤجل (يدوي)</h3>
-    <div class="row">
-      <input id="newName" placeholder="اسم الشخص"/>
-      <input id="newPhone" placeholder="رقم الهاتف (مثال +968...)"/>
-      <input id="newAmount" type="number" step="0.001" placeholder="قيمة الدين (OMR)"/>
-      <input id="newDue" placeholder="تاريخ الاستحقاق (اختياري) YYYY-MM-DD"/>
-      <button id="addDebt">حفظ الدين</button>
-    </div>
-    <div class="small">العملة: ريال عماني (OMR)</div>
-  </div>
-
-  <div class="card" style="margin-top:12px">
-    <div class="row">
-      <input id="q" placeholder="بحث بالاسم أو الهاتف"/>
-      <button id="search">بحث</button>
+  <main class="max-w-7xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <div class="space-y-6">
+      <div class="bg-white rounded-3xl p-6 shadow-sm border border-amber-100">
+        <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><i data-lucide="settings"></i> إعدادات WhatsApp</h3>
+        <div class="space-y-3">
+          <input id="instanceId" placeholder="ID الجهاز" class="w-full px-4 py-2 bg-slate-50 border rounded-xl outline-none"/>
+          <input id="token" placeholder="رمز الدخول" class="w-full px-4 py-2 bg-slate-50 border rounded-xl outline-none"/>
+          <button id="saveCfg" class="w-full bg-slate-800 text-white py-2 rounded-xl text-sm font-bold">حفظ الإعدادات</button>
+        </div>
+      </div>
+      <div class="bg-amber-50 rounded-3xl p-6 shadow-sm border border-amber-200">
+        <h3 class="font-bold text-amber-800 mb-4 flex items-center gap-2"><i data-lucide="user-plus"></i> إضافة دين يدوي</h3>
+        <div class="space-y-3">
+          <input id="newName" placeholder="اسم الزبون" class="w-full px-4 py-2 rounded-xl border-amber-200 outline-none"/>
+          <input id="newPhone" placeholder="رقم الهاتف" class="w-full px-4 py-2 rounded-xl border-amber-200 outline-none"/>
+          <input id="newAmount" type="number" step="0.001" placeholder="المبلغ" class="w-full px-4 py-2 rounded-xl border-amber-200 outline-none font-bold"/>
+          <input id="newDue" type="date" class="w-full px-4 py-2 rounded-xl border-amber-200 outline-none"/>
+          <button id="addDebt" class="w-full bg-amber-600 text-white py-3 rounded-xl font-bold hover:bg-amber-700 transition-colors shadow-lg shadow-amber-200">حفظ الدين</button>
+        </div>
+      </div>
     </div>
 
-    <table>
-      <thead>
-        <tr>
-          <th>ID</th><th>العميل</th><th>الهاتف</th>
-          <th>الأصل</th><th>المتبقي</th><th>الحالة</th><th>واتساب</th>
-        </tr>
-      </thead>
-      <tbody id="tbl"></tbody>
-    </table>
-  </div>
-
-  <div class="card" style="margin-top:12px">
-    <h3>سداد دين</h3>
-    <div class="row">
-      <input id="debtId" type="number" placeholder="Debt ID"/>
-      <input id="amount" type="number" step="0.001" placeholder="مبلغ السداد (OMR)"/>
-      <button id="pay">تسجيل سداد</button>
+    <div class="lg:col-span-2 space-y-6">
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 flex gap-2 shadow-sm">
+        <input id="q" placeholder="بحث..." class="flex-grow px-4 outline-none text-slate-700"/>
+        <button id="search" class="bg-indigo-600 text-white px-6 py-2 rounded-xl font-medium">بحث</button>
+      </div>
+      <div class="bg-white rounded-3xl p-6 shadow-sm border border-emerald-100 flex flex-col md:flex-row items-center gap-4">
+        <div class="flex-grow w-full">
+          <label class="text-xs font-bold text-emerald-600 mb-1 block">رقم الدين</label>
+          <input id="debtId" readonly class="w-full bg-slate-50 px-3 py-2 rounded-lg text-slate-500 border border-slate-100" placeholder="#ID"/>
+        </div>
+        <div class="flex-grow w-full">
+          <label class="text-xs font-bold text-emerald-600 mb-1 block">المبلغ المدفوع</label>
+          <input id="amount" type="number" step="0.001" class="w-full px-3 py-2 rounded-lg border-emerald-200 border outline-none font-bold text-emerald-700" placeholder="0.000"/>
+        </div>
+        <button id="pay" class="mt-4 md:mt-0 bg-emerald-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-emerald-700 transition-colors flex items-center gap-2 self-end shadow-lg shadow-emerald-100">سداد</button>
+      </div>
+      <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+        <table class="w-full text-right">
+          <thead class="bg-slate-50 text-slate-500 text-xs font-bold uppercase tracking-wider">
+            <tr>
+              <th class="px-4 py-4">#ID</th>
+              <th class="px-4 py-4">الزبون</th>
+              <th class="px-4 py-4 text-center">المبلغ</th>
+              <th class="px-4 py-4 text-center">المتبقي</th>
+              <th class="px-4 py-4 text-center">الإجراءات</th>
+            </tr>
+          </thead>
+          <tbody id="tbl" class="divide-y divide-slate-100"></tbody>
+        </table>
+      </div>
     </div>
-  </div>
-</div>
-
-<script type="module">
-import { getDB, setUltraMsg, payDebt, ultramsgSendChat, createManualDebt } from "./app.js";
-
-let db = getDB();
-
-function loadCfg(){
-  db = getDB();
-  document.querySelector("#instanceId").value = db.ultramsg?.instanceId || "";
-  document.querySelector("#token").value = db.ultramsg?.token || "";
-}
-
-function render(q=""){
-  db = getDB();
-  const t = (q||"").trim();
-  const rows = t
-    ? db.debts.filter(d => d.customerName.includes(t) || d.customerPhone.includes(t))
-    : db.debts;
-
-  document.querySelector("#tbl").innerHTML = rows.map(d=>{
-    const cur = d.currency || "OMR";
-    return `<tr>
-      <td>${d.id}</td>
-      <td>${d.customerName}</td>
-      <td>${d.customerPhone}</td>
-      <td>${Number(d.original).toFixed(3)} ${cur}</td>
-      <td>${Number(d.remaining).toFixed(3)} ${cur}</td>
-      <td>${d.status}</td>
-      <td><button data-id="${d.id}">إرسال</button></td>
-    </tr>`;
-  }).join("");
-
-  document.querySelectorAll("button[data-id]").forEach(btn=>{
-    btn.onclick = async ()=>{
-      const id = Number(btn.getAttribute("data-id"));
-      const debt = getDB().debts.find(x=>x.id===id);
-      if(!debt) return alert("الدين غير موجود");
-
-      const cur = debt.currency || "OMR";
-      const msg = `السلام عليكم ${debt.customerName}
-تذكير: لديك دين مؤجل متبقي ${Number(debt.remaining).toFixed(3)} ${cur}
-شكراً`;
-
-      try{
-        await ultramsgSendChat(getDB(), { to: debt.customerPhone, body: msg });
-        alert("تم الإرسال (إذا ما ظهرت مشكلة CORS)");
-      }catch(e){
-        alert("فشل الإرسال: " + e.message + "\nملاحظة: لو ظهر CORS تحتاج Proxy.");
-      }
-    };
-  });
-}
-
-document.querySelector("#saveCfg").onclick = ()=>{
-  db = getDB();
-  setUltraMsg(db, document.querySelector("#instanceId").value, document.querySelector("#token").value);
-  alert("تم حفظ الإعدادات");
-};
-
-document.querySelector("#addDebt").onclick = ()=>{
-  try{
-    const db = getDB();
-    createManualDebt(db, {
-      customerName: document.querySelector("#newName").value,
-      customerPhone: document.querySelector("#newPhone").value,
-      amount: document.querySelector("#newAmount").value,
-      dueDate: document.querySelector("#newDue").value ? (document.querySelector("#newDue").value + " 00:00:00") : ""
-    });
-    alert("تم حفظ الدين");
-    document.querySelector("#newName").value = "";
-    document.querySelector("#newPhone").value = "";
-    document.querySelector("#newAmount").value = "";
-    document.querySelector("#newDue").value = "";
-    render(document.querySelector("#q").value);
-  }catch(e){
-    alert(e.message);
-  }
-};
-
-document.querySelector("#search").onclick = ()=> render(document.querySelector("#q").value);
-
-document.querySelector("#pay").onclick = ()=>{
-  try{
-    db = getDB();
-    payDebt(db, { debtId: Number(document.querySelector("#debtId").value), amount: document.querySelector("#amount").value });
-    alert("تم تسجيل السداد");
-    render(document.querySelector("#q").value);
-  }catch(e){ alert(e.message); }
-};
-
-loadCfg();
-render();
-</script>
+  </main>
+  <script>lucide.createIcons();</script>
 </body>
 </html>
